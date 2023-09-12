@@ -2,13 +2,44 @@ import sqlite3
 import re
 '''con = sqlite3.connect("banking_database.db")
         cur = con.cursor()'''
+
+class ProgramInit:
+    def __init__(self):
+        self.command_prompts = {
+        "Type '1' to log in.": "1",
+        "Type '2' to register.": "2",
+        "Type 'quit' to quit the program.": "quit"
+    }
+    def start_up(self):
+        print("Welcome, this is an interactive banking app.")
+        for prompt, comm in self.command_prompts.items():
+            print(prompt)
+
+        user_choice = input().casefold().strip()
+        while user_choice not in self.command_prompts.values():
+            print(
+                "Incorrect command. Please try again. If you wish to quit, type in 'quit'."
+            )
+            user_choice = input()
+        else:
+            return user_choice
+
+    def main(self):
+        banking_app = BankingApp()
+        while True:
+            user_choice = self.start_up()
+            if user_choice == "1":
+                if banking_app.login():
+                    print("Logged in successfully.")
+                    break #Logs in and goes to next screen.
+            elif user_choice == "2":
+                ...
+            elif user_choice == "quit":
+                raise (SystemExit("Program stopped."))
+
 class DatabaseActions:
 
     def __init__(self):
-        self.connection = None
-        self.cursor = None
-
-    def connect(self):
         self.connection = sqlite3.connect("banking_database.db")
         self.cursor = self.connection.cursor()
 
@@ -22,24 +53,29 @@ class DatabaseActions:
 #cur.execute("INSERT INTO customer_info VALUES('test_2@gmail.com', 'testerissimo2')")
 #con.commit()
 
-'''Using inheritence to make sure functions are able to utilize queries to SQLite'''
-class BankingApp(DatabaseActions):
 
-    def login(self):
+class BankingApp(DatabaseActions):
+    '''Using inheritence to make sure functions are able to utilize queries to SQLite'''
+
+    def login(self) -> bool:
+        '''Asks for email and password and initializes validity checks through other functions.'''
         email = input("Enter your email address: ")
-        password = input("Enter your pasword: ")
+        password = input("Enter your password: ")
 
         '''If email in customer_info database, check if password valid'''
         if self.email_is_valid(email):
             return self.password_is_valid(email, password)
+        else:
+            print("Incorrect credentials. Please try again or register a new account.")
+
 
 
 
     def email_is_valid(self, input_email: str) -> bool:
         '''Checking if email is in the database'''
-        cur.execute("SELECT email FROM customer_info")
-        email_result = cur.fetchall()
-        print(email_result)
+        self.cursor.execute("SELECT email FROM customer_info")
+        email_result = self.cursor.fetchall()
+
         for registered_email_tuple in email_result:
 
             (registered_email,) = registered_email_tuple #Tuple unpacking here
@@ -51,28 +87,23 @@ class BankingApp(DatabaseActions):
         print("Account not found. Please try again or register.")
         return False
 
-    def password_is_valid(self, input_email: str, input_password: str):
+    def password_is_valid(self, input_email: str, input_password: str) -> bool:
         '''Checking if password corresponds to email.'''
-        cur.execute(f"SELECT password FROM customer_info WHERE email = {input_email}")
 
-def main():
+        self.cursor.execute(f"SELECT password FROM customer_info WHERE email = ?", (input_email,))
+        password_result_tuple = self.cursor.fetchone()
 
-    initial_response = input("Welcome, this is an interactive banking app.\n"
-          "Type 1 to log in.\n"
-          "Type 2 to register.\n"
-          "Type quit to exit the program.\n").strip()
-    banking_app = BankingApp()
-    if initial_response == "1":
-        while not banking_app.login():
-            continue
+        (password_result,) = password_result_tuple  # Tuple unpacking again
+        if password_result == input_password:
+            return True
         else:
-            print("Logged in successfully.")
-    if banking_app.login():
-        ...
-    else:
-        ...
+            return False
+
+
+
 if __name__ == "__main__":
-    main()
+    program_init = ProgramInit()
+    program_init.main()
 
 
 
