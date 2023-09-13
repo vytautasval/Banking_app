@@ -108,18 +108,44 @@ class BankingApp(DatabaseActions):
     def register(self):
         desired_email = input("Please enter an email you would like to use: ")
         while True:
-            if not self.email_is_valid(desired_email):
+
+            if desired_email.lower() == "quit":
+                return
+
+            while not self.email_is_valid(desired_email):
                 # Using previously defined function to check if email already in database.
-                if self.email_format_is_valid(desired_email) != None:
+                if desired_email.lower() == "quit":
+                    return
+                elif self.email_format_is_valid(desired_email) != None:
                     print("Email is valid.")
                     break
                 else:
-                    desired_email = input("Email invalid. Please choose another one: ")
-            desired_email = input("Email invalid. Please choose another one: ")
+                    desired_email = input("Email invalid. Please choose another one, or type 'quit' to return: ")
+            break
 
-        desired_password = print(
-                        "Please enter a password you would like to use. It must be between 8 and 20 characters long."
+            if desired_email.lower() == "quit":
+                return
+
+        desired_password = input(
+                        "Please enter a password you would like to use. It must be between 8 and 20 characters long: "
                     )
+        while True:
+
+            if desired_password.lower() == "quit":
+                return
+
+            elif self.password_format_is_valid(desired_password):
+                print("Password is valid.")
+                self.create_customer_profile(desired_email, desired_password)
+                self.connection.commit()
+                print("You have successfully created an account. You may now log in.")
+                return  # Exit the registration process
+            else:
+                desired_password = input(
+                    "Password invalid. Please choose another one, or type 'quit' to return: "
+                )
+                if desired_password.lower() == "quit":
+                    return
 
 
     def email_format_is_valid(self, input_email: str) -> bool | str:
@@ -129,6 +155,7 @@ class BankingApp(DatabaseActions):
             "([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+",
             input_email
         )
+
 
     def password_format_is_valid(self, input_password: str) -> bool | str:
         return re.search(
