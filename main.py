@@ -1,5 +1,6 @@
 import sqlite3
 import re
+import bcrypt
 
 """con = sqlite3.connect("banking_database.db")
         cur = con.cursor()"""
@@ -50,13 +51,13 @@ class DatabaseActions:
     """def create_table(self):
         #cur.execute("CREATE TABLE customer_info(email VARCHAR(40) PRIMARY KEY, password VARCHAR(20))")"""
 
-    def create_customer_profile(self, input_email: str, input_password: str):
-        """Adds a new email and password into the customer_info database"""
-
+    def create_customer_profile(self, input_email: str, hashed_password: str):
+        """Adds a new email and password into the customer_info database. Password is hashed using bcrypt"""
         self.cursor.execute(
             "INSERT INTO customer_info (email, password) VALUES(?, ?)",
-            (input_email, input_password)
+            (input_email, hashed_password)
         )
+        self.connection.commit()
 
 
 # cur.execute("INSERT INTO customer_info VALUES('test_2@gmail.com', 'testerissimo2')")
@@ -69,15 +70,15 @@ class BankingApp(DatabaseActions):
     def login(self) -> bool:
         """Asks for email and password and initializes validity checks through other functions."""
         email = input("Enter your email address: ")
-        password = input("Enter your password: ")
+        input_password = input("Enter your password: ")
 
         """If email in customer_info database, check if password valid"""
         if self.email_is_valid(email):
-            return self.password_is_valid(email, password)
+            return self.password_is_valid(email, input_password)
         else:
             print("Incorrect credentials. Please try again or register a new account.")
 
-    def email_is_valid(self, input_email: str) -> bool:
+    def email_is_valid(self, input_email: str) -> bool :
         """Checking if email is in the database"""
         self.cursor.execute("SELECT email FROM customer_info")
         email_result = self.cursor.fetchall()
@@ -91,21 +92,22 @@ class BankingApp(DatabaseActions):
 
         return False
 
-    def password_is_valid(self, input_email: str, input_password: str) -> bool:
+    def password_is_valid(self, input_email: str, input_password: str) -> bool | str:
         """Checking if password corresponds to email."""
-
         self.cursor.execute(
             "SELECT password FROM customer_info WHERE email = ?", (input_email,)
         )
         password_result_tuple = self.cursor.fetchone()
+        (hashed_password,) = password_result_tuple #Tuple unpacking
 
-        (password_result,) = password_result_tuple  # Tuple unpacking again
-        if password_result == input_password:
+        if bcrypt.checkpw(input_password, hashed_password):
             return True
         else:
             return False
 
     def register(self):
+        """Prompts the user for their desired email and password and sends them through validity checks.
+        If all checks passed, the new user information is stored in the database."""
         desired_email = input("Please enter an email you would like to use: ")
         while True:
 
@@ -130,14 +132,14 @@ class BankingApp(DatabaseActions):
                         "Please enter a password you would like to use. It must be between 8 and 20 characters long: "
                     )
         while True:
-
             if desired_password.lower() == "quit":
                 return
-
             elif self.password_format_is_valid(desired_password):
                 print("Password is valid.")
-                self.create_customer_profile(desired_email, desired_password)
-                self.connection.commit()
+                encoded_password = desired_password.encode()
+                hashed_password = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
+
+                self.create_customer_profile(desired_email, hashed_password)
                 print("You have successfully created an account. You may now log in.")
                 return  # Exit the registration process
             else:
