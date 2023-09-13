@@ -132,7 +132,7 @@ class BankingApp(DatabaseActions):
 
     def password_format_is_valid(self, input_password: str) -> bool | str:
         return re.search(
-            ""
+            ".{8,20}$", input_password
         )
 
 if __name__ == "__main__":
