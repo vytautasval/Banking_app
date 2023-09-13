@@ -82,7 +82,7 @@ class BankingApp(DatabaseActions):
         """Checking if email is in the database"""
         self.cursor.execute("SELECT email FROM customer_info")
         email_result = self.cursor.fetchall()
-
+        #xdxdxd
         for registered_email_tuple in email_result:
             (registered_email,) = registered_email_tuple  # Tuple unpacking here
             if registered_email != input_email:
