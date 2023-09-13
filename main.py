@@ -30,7 +30,9 @@ class ProgramInit:
         while True:
             user_choice = self.start_up()
             if user_choice == "1":
-                if banking_app.login():
+                login_result = banking_app.login()
+                if login_result != False:
+                    email = login_result
                     print("Logged in successfully.")
                     # Logs in and goes to next screen.
                 else:
@@ -53,6 +55,7 @@ class DatabaseActions:
         self.connection = sqlite3.connect("banking_database.db")
         self.cursor = self.connection.cursor()
 
+
     def create_customer_profile(self, input_email: str, hashed_password: str):
         """Adds a new email and password into the customer_info database. Password is hashed using bcrypt"""
         self.cursor.execute(
@@ -60,23 +63,29 @@ class DatabaseActions:
             (input_email, hashed_password),
         )
         self.cursor.execute(
-            "INSERT INTO customer_actions (email, deposit, withdrawal, balance) VALUES(?, 0, 0, 0)",
+            "INSERT INTO customer_balance (email, deposit, withdrawal, balance) VALUES(?, 0, 0, 0)",
             (input_email,)
         )
         self.connection.commit()
+
+    def get_email(self):
+        ...
 
 
 class BankingApp(DatabaseActions):
     """Using inheritence to make sure functions are able to utilize queries to SQLite"""
 
-    def login(self) -> bool:
+    def login(self) -> bool | str:
         """Asks for email and password and initializes validity checks through other functions."""
         email = input("Enter your email address: ")
-        input_password = input("Enter your password: ")
+        password = input("Enter your password: ")
 
         """If email in customer_info database, check if password valid"""
         if self.email_is_valid(email):
-            return self.password_is_valid(email, input_password)
+            if self.password_is_valid(email, password):
+                return email
+            else:
+                return False
         else:
             return False
 
@@ -155,21 +164,32 @@ class BankingApp(DatabaseActions):
     def password_format_is_valid(self, input_password: str) -> bool | str:
         return re.search(".{8,20}$", input_password)
 
+    def customer_info(self):
+        ...
+        """while True:
+            print(f"Hello, {}")"""
 
-def sql_commands():
+
+def sql_queries():
     con = sqlite3.connect("banking_database.db")
     cur = con.cursor()
-    cur.execute("DROP TABLE customer_info")
+    '''cur.execute("ALTER TABLE customer_actions RENAME TO customer_balance")
+    cur.execute("DROP TABLE transactions")
     cur.execute(
         "CREATE TABLE customer_info(email VARCHAR(40) PRIMARY KEY, password VARCHAR(20))"
     )
     cur.execute(
-        "CREATE TABLE customer_actions(email VARCHAR(40), deposit DECIMAL(18,2), withdrawal DECIMAL(18,2), balance DECIMAL(18,2),  FOREIGN KEY (email) REFERENCES customer_info (email))"
+        "CREATE TABLE customer_actions(email VARCHAR(40), deposit DECIMAL(18,2), withdrawal DECIMAL(18,2), balance DECIMAL(18,2), FOREIGN KEY (email) REFERENCES customer_info (email))"
     )
-    con.commit()
+    cur.execute(
+        "CREATE TABLE transactions(email VARCHAR(40), deposit DECIMAL(18,2), withdrawal DECIMAL(18,2), date DATE, FOREIGN KEY (email) REFERENCES customer_info (email))"
+    )
+    con.commit()'''
+
+
 
 if __name__ == "__main__":
-    program_init = ProgramInit()
-    program_init.main()
-
+    """program_init = ProgramInit()
+    program_init.main()"""
+    
 
