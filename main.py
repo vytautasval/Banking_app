@@ -35,7 +35,7 @@ class ProgramInit:
             if user_choice == "1":
                 if banking_app.login():
                     print("Logged in successfully.")
-                    break  # Logs in and goes to next screen.
+                    x = input("hey? ") # Logs in and goes to next screen.
             elif user_choice == "2":
                 banking_app.register()
 
