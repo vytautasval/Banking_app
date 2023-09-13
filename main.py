@@ -2,9 +2,6 @@ import sqlite3
 import re
 import bcrypt
 
-"""con = sqlite3.connect("banking_database.db")
-        cur = con.cursor()"""
-
 
 class ProgramInit:
     def __init__(self):
@@ -37,10 +34,15 @@ class ProgramInit:
                     print("Logged in successfully.")
                     # Logs in and goes to next screen.
                 else:
-                    print("Incorrect credentials. Please try again or register a new account.")
+                    print(
+                        "Incorrect credentials. Please try again or register a new account."
+                    )
                     continue
             elif user_choice == "2":
-                banking_app.register()
+                if banking_app.register():
+                    print(
+                        "You have successfully created an account. You have now been logged in."
+                    )
 
             elif user_choice == "quit":
                 raise (SystemExit("Program stopped."))
@@ -51,20 +53,17 @@ class DatabaseActions:
         self.connection = sqlite3.connect("banking_database.db")
         self.cursor = self.connection.cursor()
 
-    """def create_table(self):
-        #cur.execute("CREATE TABLE customer_info(email VARCHAR(40) PRIMARY KEY, password VARCHAR(20))")"""
-
     def create_customer_profile(self, input_email: str, hashed_password: str):
         """Adds a new email and password into the customer_info database. Password is hashed using bcrypt"""
         self.cursor.execute(
             "INSERT INTO customer_info (email, password) VALUES(?, ?)",
-            (input_email, hashed_password)
+            (input_email, hashed_password),
+        )
+        self.cursor.execute(
+            "INSERT INTO customer_actions (email, deposit, withdrawal, balance) VALUES(?, 0, 0, 0)",
+            (input_email,)
         )
         self.connection.commit()
-
-
-# cur.execute("INSERT INTO customer_info VALUES('test_2@gmail.com', 'testerissimo2')")
-# con.commit()
 
 
 class BankingApp(DatabaseActions):
@@ -83,7 +82,9 @@ class BankingApp(DatabaseActions):
 
     def email_is_valid(self, input_email: str) -> bool:
         """Checking if email is in the database"""
-        self.cursor.execute("SELECT COUNT(*) FROM customer_info WHERE email = ?", (input_email,))
+        self.cursor.execute(
+            "SELECT COUNT(*) FROM customer_info WHERE email = ?", (input_email,)
+        )
 
         count = self.cursor.fetchone()[0]
 
@@ -95,7 +96,7 @@ class BankingApp(DatabaseActions):
             "SELECT password FROM customer_info WHERE email = ?", (input_email,)
         )
         password_result_tuple = self.cursor.fetchone()
-        (hashed_password,) = password_result_tuple #Tuple unpacking
+        (hashed_password,) = password_result_tuple  # Tuple unpacking
 
         encoded_password = input_password.encode()
         if bcrypt.checkpw(encoded_password, hashed_password):
@@ -114,15 +115,16 @@ class BankingApp(DatabaseActions):
                 return
             elif self.email_is_valid(desired_email):
                 # Using previously defined function to check if email already in database.
-                print("Email invalid. Please choose another one, or type 'quit' to return: ")
+                print(
+                    "Email invalid. Please choose another one, or type 'quit' to return: "
+                )
             elif self.email_format_is_valid(desired_email) != None:
                 print("Email is valid.")
                 break
             else:
-                desired_email = input("Email invalid. Please choose another one, or type 'quit' to return: ")
-
-
-
+                desired_email = input(
+                    "Email invalid. Please choose another one, or type 'quit' to return: "
+                )
 
         while True:
             desired_password = input(
@@ -136,27 +138,38 @@ class BankingApp(DatabaseActions):
                 hashed_password = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
 
                 self.create_customer_profile(desired_email, hashed_password)
-                print("You have successfully created an account. You may now log in.")
-                return  # Exit the registration process
+                return True  # Exit the registration process
             else:
-                print("Password invalid. Please choose another one, or type 'quit' to return: ")
-
-
+                print(
+                    "Password invalid. Please choose another one, or type 'quit' to return: "
+                )
 
     def email_format_is_valid(self, input_email: str) -> bool | str:
         """Checks if user inputted email is in a valid format using regex."""
 
         return re.search(
             "([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+",
-            input_email
+            input_email,
         )
-
 
     def password_format_is_valid(self, input_password: str) -> bool | str:
-        return re.search(
-            ".{8,20}$", input_password
-        )
+        return re.search(".{8,20}$", input_password)
+
+
+def sql_commands():
+    con = sqlite3.connect("banking_database.db")
+    cur = con.cursor()
+    cur.execute("DROP TABLE customer_info")
+    cur.execute(
+        "CREATE TABLE customer_info(email VARCHAR(40) PRIMARY KEY, password VARCHAR(20))"
+    )
+    cur.execute(
+        "CREATE TABLE customer_actions(email VARCHAR(40), deposit DECIMAL(18,2), withdrawal DECIMAL(18,2), balance DECIMAL(18,2),  FOREIGN KEY (email) REFERENCES customer_info (email))"
+    )
+    con.commit()
 
 if __name__ == "__main__":
     program_init = ProgramInit()
     program_init.main()
+
+
