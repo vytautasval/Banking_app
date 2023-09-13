@@ -35,7 +35,10 @@ class ProgramInit:
             if user_choice == "1":
                 if banking_app.login():
                     print("Logged in successfully.")
-                    x = input("hey? ") # Logs in and goes to next screen.
+                    # Logs in and goes to next screen.
+                else:
+                    print("Incorrect credentials. Please try again or register a new account.")
+                    continue
             elif user_choice == "2":
                 banking_app.register()
 
@@ -76,21 +79,15 @@ class BankingApp(DatabaseActions):
         if self.email_is_valid(email):
             return self.password_is_valid(email, input_password)
         else:
-            print("Incorrect credentials. Please try again or register a new account.")
+            return False
 
-    def email_is_valid(self, input_email: str) -> bool :
+    def email_is_valid(self, input_email: str) -> bool:
         """Checking if email is in the database"""
-        self.cursor.execute("SELECT email FROM customer_info")
-        email_result = self.cursor.fetchall()
-        #xdxdxd
-        for registered_email_tuple in email_result:
-            (registered_email,) = registered_email_tuple  # Tuple unpacking here
-            if registered_email != input_email:
-                continue
-            elif registered_email == input_email:
-                return True
+        self.cursor.execute("SELECT COUNT(*) FROM customer_info WHERE email = ?", (input_email,))
 
-        return False
+        count = self.cursor.fetchone()[0]
+
+        return count > 0
 
     def password_is_valid(self, input_email: str, input_password: str) -> bool | str:
         """Checking if password corresponds to email."""
@@ -100,7 +97,8 @@ class BankingApp(DatabaseActions):
         password_result_tuple = self.cursor.fetchone()
         (hashed_password,) = password_result_tuple #Tuple unpacking
 
-        if bcrypt.checkpw(input_password, hashed_password):
+        encoded_password = input_password.encode()
+        if bcrypt.checkpw(encoded_password, hashed_password):
             return True
         else:
             return False
@@ -108,30 +106,28 @@ class BankingApp(DatabaseActions):
     def register(self):
         """Prompts the user for their desired email and password and sends them through validity checks.
         If all checks passed, the new user information is stored in the database."""
-        desired_email = input("Please enter an email you would like to use: ")
+
         while True:
+            desired_email = input("Please enter an email you would like to use: ")
 
             if desired_email.lower() == "quit":
                 return
-
-            while not self.email_is_valid(desired_email):
+            elif self.email_is_valid(desired_email):
                 # Using previously defined function to check if email already in database.
-                if desired_email.lower() == "quit":
-                    return
-                elif self.email_format_is_valid(desired_email) != None:
-                    print("Email is valid.")
-                    break
-                else:
-                    desired_email = input("Email invalid. Please choose another one, or type 'quit' to return: ")
-            break
+                print("Email invalid. Please choose another one, or type 'quit' to return: ")
+            elif self.email_format_is_valid(desired_email) != None:
+                print("Email is valid.")
+                break
+            else:
+                desired_email = input("Email invalid. Please choose another one, or type 'quit' to return: ")
 
-            if desired_email.lower() == "quit":
-                return
 
-        desired_password = input(
-                        "Please enter a password you would like to use. It must be between 8 and 20 characters long: "
-                    )
+
+
         while True:
+            desired_password = input(
+                "Please enter a password you would like to use. It must be between 8 and 20 characters long: "
+            )
             if desired_password.lower() == "quit":
                 return
             elif self.password_format_is_valid(desired_password):
@@ -143,11 +139,8 @@ class BankingApp(DatabaseActions):
                 print("You have successfully created an account. You may now log in.")
                 return  # Exit the registration process
             else:
-                desired_password = input(
-                    "Password invalid. Please choose another one, or type 'quit' to return: "
-                )
-                if desired_password.lower() == "quit":
-                    return
+                print("Password invalid. Please choose another one, or type 'quit' to return: ")
+
 
 
     def email_format_is_valid(self, input_email: str) -> bool | str:
