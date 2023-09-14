@@ -1,7 +1,7 @@
 import sqlite3
 import re
 import bcrypt
-
+import datetime
 
 class ProgramInit:
     def __init__(self):
@@ -87,6 +87,8 @@ class ProgramInit:
             user_choice = self.account_actions_start_up()
             if user_choice == "1":
                 banking_app.deposit(email)
+            elif user_choice == "2":
+                banking_app.withdraw(email)
 
 class DatabaseActions:
     def __init__(self):
@@ -122,6 +124,17 @@ class DatabaseActions:
 
         return unpacked_balance
 
+    def balance_update(self, email: str, operation: float) -> float:
+        """Takes user input and posts a new number for user balance to the database accordingly."""
+        total_balance = self.get_balance(email)
+        new_value = total_balance + operation
+
+        self.cursor.execute(
+            "UPDATE customer_balance SET balance = ? WHERE email = ?",
+            (new_value, email,)
+        )
+        self.connection.commit()
+
     def get_deposit(self, email: str) -> int:
         """Enters customer_balance database and returns total deposit amount based on email."""
         self.cursor.execute("SELECT deposit FROM customer_balance WHERE email = ?", (email,))
@@ -146,6 +159,20 @@ class DatabaseActions:
 
         return unpacked_withdrawal
 
+    def make_withdrawal(self, email: str, total_amount: float):
+        """Updates the customer_balance database with a new total amount for withdrawals."""
+        self.cursor.execute(
+            "UPDATE customer_balance SET withdrawal = ? WHERE email = ?",
+            (total_amount, email,)
+        )
+        self.connection.commit()
+
+    def post_transaction(self, email: str, operation: float):
+        """Posts the transaction to the total transactions database."""
+        current_time = datetime.datetime.now()
+        self.cursor.execute("INSERT INTO transactions (email, operation, date) VALUES(?, ?, ?)",
+                            (email, operation, current_time))
+        self.connection.commit()
 
 class BankingApp(DatabaseActions):
     """Using inheritence to make sure functions are able to utilize queries to SQLite"""
@@ -247,8 +274,8 @@ class BankingApp(DatabaseActions):
         withdrawal = self.get_withdrawal(email)
 
         print(f"Hello, {name}.\n"
-                f"Your balance is: {balance}\n"
-                f"Split into deposits: {deposit}, and withdrawals: {withdrawal}")
+                f"Your balance is: €{balance}\n"
+                f"Split into deposits: €{deposit}, and withdrawals: €{withdrawal}")
 
     def number_is_valid(self, input_number: str) -> bool:
         """Checks if given number is a valid float."""
@@ -258,7 +285,7 @@ class BankingApp(DatabaseActions):
         except ValueError:
             return False
 
-    def deposit(self, email: str) -> str | float:
+    def deposit(self, email: str):
         """Takes an email, checks if user input valid and calls make_deposit database function."""
         print("In order to make a deposit, please enter the number only.")
         total_deposits = self.get_deposit(email)
@@ -269,7 +296,34 @@ class BankingApp(DatabaseActions):
             elif self.number_is_valid(user_deposit):
                 new_value = float(user_deposit) + total_deposits
                 self.make_deposit(email, new_value)
+                self.post_transaction(email, float(user_deposit))
+                self.balance_update(email, float(user_deposit))
+                print("Deposit made successfully.")
                 break
+            else:
+                print("Invalid number provided.")
+
+    def withdraw(self, email: str):
+        """Takes an email, checks if user input is valid, if selected amount not bigger than available balance
+        and calls make_withdrawal function if conditons met."""
+        print("In order to make a withdrawal, please enter the number only.")
+        total_withdrawal = self.get_withdrawal(email)
+        available_balance = self.get_balance(email)
+        while True:
+            user_withdrawal = input("Withdrawal: ")
+            if user_withdrawal == "quit":
+                return
+            elif self.number_is_valid(user_withdrawal):
+                if float(user_withdrawal) > available_balance:
+                    print(f"Not enough funds available. You currently have €{available_balance}.")
+                    continue
+                else:
+                    new_value = total_withdrawal - float(user_withdrawal)
+                    self.make_withdrawal(email, new_value)
+                    self.post_transaction(email, -abs(float(user_withdrawal)))
+                    self.balance_update(email, -abs(float(user_withdrawal)))
+                    print("Withdrawal made successfully.")
+                    break
             else:
                 print("Invalid number provided.")
 
@@ -290,6 +344,10 @@ def sql_queries():
         "CREATE TABLE transactions(email VARCHAR(40), deposit DECIMAL(18,2), withdrawal DECIMAL(18,2), date DATE, FOREIGN KEY (email) REFERENCES customer_info (email))"
     )
     con.commit()'''
+    '''cur.execute("UPDATE customer_balance SET deposit = 0, withdrawal = 0, balance = 0")'''
+
+    '''cur.execute("DELETE FROM transactions")'''
+
 
 
 
