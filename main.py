@@ -4,6 +4,7 @@ import bcrypt
 import datetime
 import pandas as pd
 
+
 class ProgramInit:
     def __init__(self):
         self.command_prompts_1 = {
@@ -120,7 +121,7 @@ class DatabaseActions:
         )
         self.cursor.execute(
             "INSERT INTO customer_balance (email, deposit, withdrawal, balance) VALUES(?, 0, 0, 0)",
-            (email,)
+            (email,),
         )
         self.connection.commit()
 
@@ -134,7 +135,9 @@ class DatabaseActions:
 
     def get_balance(self, email: str) -> int:
         """Enters customer_balance database and returns balance based on email."""
-        self.cursor.execute("SELECT balance FROM customer_balance WHERE email = ?", (email,))
+        self.cursor.execute(
+            "SELECT balance FROM customer_balance WHERE email = ?", (email,)
+        )
         balance_result_tuple = self.cursor.fetchone()
         (unpacked_balance,) = balance_result_tuple
 
@@ -147,13 +150,18 @@ class DatabaseActions:
 
         self.cursor.execute(
             "UPDATE customer_balance SET balance = ? WHERE email = ?",
-            (round(new_value, 2), email,)
+            (
+                round(new_value, 2),
+                email,
+            ),
         )
         self.connection.commit()
 
     def get_deposit(self, email: str) -> int:
         """Enters customer_balance database and returns total deposit amount based on email."""
-        self.cursor.execute("SELECT deposit FROM customer_balance WHERE email = ?", (email,))
+        self.cursor.execute(
+            "SELECT deposit FROM customer_balance WHERE email = ?", (email,)
+        )
         deposit_result_tuple = self.cursor.fetchone()
         (unpacked_deposit,) = deposit_result_tuple
 
@@ -163,13 +171,18 @@ class DatabaseActions:
         """Updates the customer_balance database with a new total amount for deposits."""
         self.cursor.execute(
             "UPDATE customer_balance SET deposit = ? WHERE email = ?",
-            (round(total_amount, 2), email,)
+            (
+                round(total_amount, 2),
+                email,
+            ),
         )
         self.connection.commit()
 
     def get_withdrawal(self, email: str) -> int:
         """Enters customer_balance database and returns total withdrawal amount based on email."""
-        self.cursor.execute("SELECT withdrawal FROM customer_balance WHERE email = ?", (email,))
+        self.cursor.execute(
+            "SELECT withdrawal FROM customer_balance WHERE email = ?", (email,)
+        )
         withdrawal_result_tuple = self.cursor.fetchone()
         (unpacked_withdrawal,) = withdrawal_result_tuple
 
@@ -179,17 +192,21 @@ class DatabaseActions:
         """Updates the customer_balance database with a new total amount for withdrawals."""
         self.cursor.execute(
             "UPDATE customer_balance SET withdrawal = ? WHERE email = ?",
-            (round(total_amount, 2), email,)
+            (
+                round(total_amount, 2),
+                email,
+            ),
         )
         self.connection.commit()
 
     def post_transaction(self, email: str, operation: float):
         """Posts the transaction to the total transactions database."""
         current_time = datetime.datetime.now()
-        self.cursor.execute("INSERT INTO transactions (email, operation, date) VALUES(?, ?, ?)",
-                            (email, round(operation, 2), current_time))
+        self.cursor.execute(
+            "INSERT INTO transactions (email, operation, date) VALUES(?, ?, ?)",
+            (email, round(operation, 2), current_time),
+        )
         self.connection.commit()
-
 
 
 class BankingApp(DatabaseActions):
@@ -242,15 +259,12 @@ class BankingApp(DatabaseActions):
 
             if desired_email.lower() == "quit":
                 return
-            elif not self.email_is_valid(desired_email):
+            elif self.email_is_valid(desired_email):
                 # Using previously defined function to check if email already in database.
-                print(
-                    "Email invalid. Choose another one, or type 'quit' to return. "
-                )
-            elif self.email_format_is_valid(desired_email) != None:
+                print("Email invalid. Choose another one, or type 'quit' to return. ")
+            elif self.email_format_is_valid(desired_email):
                 print("Email is valid.")
                 break
-
 
         while True:
             desired_password = input(
@@ -272,10 +286,15 @@ class BankingApp(DatabaseActions):
 
     def email_format_is_valid(self, input_email: str) -> bool | str:
         """Checks if user inputted email is in a valid format using regex."""
-        return re.search(
+
+        result = re.search(
             "([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+",
             input_email,
         )
+        if result == None:
+            return False
+        else:
+            return True
 
     def password_format_is_valid(self, input_password: str) -> bool | str:
         """Makes a simple check if password is valid using regex."""
@@ -288,8 +307,10 @@ class BankingApp(DatabaseActions):
         deposit = self.get_deposit(email)
         withdrawal = self.get_withdrawal(email)
 
-        print(f"Your balance is: {balance}€\n"
-                f"Split into deposits: {deposit}€, and withdrawals: {withdrawal}€")
+        print(
+            f"Your balance is: {balance}€\n"
+            f"Split into deposits: {deposit}€, and withdrawals: {withdrawal}€"
+        )
 
     def number_is_valid(self, input_number: str) -> bool:
         """Checks if given number is a valid float."""
@@ -329,7 +350,9 @@ class BankingApp(DatabaseActions):
                 return
             elif self.number_is_valid(user_withdrawal):
                 if float(user_withdrawal) > available_balance:
-                    print(f"Not enough funds available. You currently have €{available_balance}.")
+                    print(
+                        f"Not enough funds available. You currently have €{available_balance}."
+                    )
                     continue
                 else:
                     new_value = total_withdrawal - float(user_withdrawal)
@@ -342,6 +365,7 @@ class BankingApp(DatabaseActions):
                 print("Invalid number provided.")
 
     def convert_to_xlsx(self, email: str):
+        """Creates an excel file for the specific user of all of their transactions."""
         query = f"SELECT * FROM transactions WHERE email = ?"
 
         df = pd.read_sql(query, self.connection, params=(email,))
@@ -350,13 +374,12 @@ class BankingApp(DatabaseActions):
         print("File created successfully.")
 
 
-
 def sql_queries():
     """Function with necessary SQL queries."""
 
     con = sqlite3.connect("banking_database.db")
     cur = con.cursor()
-    '''cur.execute("ALTER TABLE customer_actions RENAME TO customer_balance")
+    """cur.execute("ALTER TABLE customer_actions RENAME TO customer_balance")
     cur.execute("DROP TABLE transactions")
     cur.execute(
         "CREATE TABLE customer_info(email VARCHAR(40) PRIMARY KEY, password VARCHAR(20))"
@@ -367,16 +390,12 @@ def sql_queries():
     cur.execute(
         "CREATE TABLE transactions(email VARCHAR(40), deposit DECIMAL(18,2), withdrawal DECIMAL(18,2), date DATE, FOREIGN KEY (email) REFERENCES customer_info (email))"
     )
-    con.commit()'''
-    '''cur.execute("UPDATE customer_balance SET deposit = 0, withdrawal = 0, balance = 0")'''
+    con.commit()"""
+    """cur.execute("UPDATE customer_balance SET deposit = 0, withdrawal = 0, balance = 0")"""
 
-    '''cur.execute("DELETE FROM transactions")'''
-
-
+    """cur.execute("DELETE FROM transactions")"""
 
 
 if __name__ == "__main__":
     program_init = ProgramInit()
     program_init.main()
-
-
