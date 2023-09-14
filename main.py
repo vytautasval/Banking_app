@@ -2,6 +2,7 @@ import sqlite3
 import re
 import bcrypt
 import datetime
+import pandas as pd
 
 class ProgramInit:
     def __init__(self):
@@ -83,12 +84,27 @@ class ProgramInit:
     def account_actions_main(self, email: str):
         """Initializes the seconds screen based on user choice."""
         banking_app = BankingApp()
+        database_actions = DatabaseActions()
+
+        e = database_actions.get_email(email)
+        email_list = e.split("@")
+        name = email_list[0]
+        print(f"Hello, {name}.")
         while True:
             user_choice = self.account_actions_start_up()
             if user_choice == "1":
                 banking_app.deposit(email)
             elif user_choice == "2":
                 banking_app.withdraw(email)
+            elif user_choice == "3":
+                banking_app.customer_info(email)
+            elif user_choice == "4":
+                banking_app.convert_to_xlsx(email)
+            elif user_choice == "5":
+                break
+            elif user_choice == "quit":
+                raise (SystemExit("Program stopped."))
+
 
 class DatabaseActions:
     def __init__(self):
@@ -131,7 +147,7 @@ class DatabaseActions:
 
         self.cursor.execute(
             "UPDATE customer_balance SET balance = ? WHERE email = ?",
-            (new_value, email,)
+            (round(new_value, 2), email,)
         )
         self.connection.commit()
 
@@ -147,7 +163,7 @@ class DatabaseActions:
         """Updates the customer_balance database with a new total amount for deposits."""
         self.cursor.execute(
             "UPDATE customer_balance SET deposit = ? WHERE email = ?",
-            (total_amount, email,)
+            (round(total_amount, 2), email,)
         )
         self.connection.commit()
 
@@ -163,7 +179,7 @@ class DatabaseActions:
         """Updates the customer_balance database with a new total amount for withdrawals."""
         self.cursor.execute(
             "UPDATE customer_balance SET withdrawal = ? WHERE email = ?",
-            (total_amount, email,)
+            (round(total_amount, 2), email,)
         )
         self.connection.commit()
 
@@ -171,8 +187,10 @@ class DatabaseActions:
         """Posts the transaction to the total transactions database."""
         current_time = datetime.datetime.now()
         self.cursor.execute("INSERT INTO transactions (email, operation, date) VALUES(?, ?, ?)",
-                            (email, operation, current_time))
+                            (email, round(operation, 2), current_time))
         self.connection.commit()
+
+
 
 class BankingApp(DatabaseActions):
     """Using inheritence to make sure functions are able to utilize queries to SQLite"""
@@ -265,17 +283,13 @@ class BankingApp(DatabaseActions):
 
     def customer_info(self, email: str) -> print:
         """Prints out the balance, deposit and withdrawal amounts of an account."""
-        e = self.get_email(email)
-        email_list = e.split("@")
-        name = email_list[0]
 
         balance = self.get_balance(email)
         deposit = self.get_deposit(email)
         withdrawal = self.get_withdrawal(email)
 
-        print(f"Hello, {name}.\n"
-                f"Your balance is: €{balance}\n"
-                f"Split into deposits: €{deposit}, and withdrawals: €{withdrawal}")
+        print(f"Your balance is: {balance}€\n"
+                f"Split into deposits: {deposit}€, and withdrawals: {withdrawal}€")
 
     def number_is_valid(self, input_number: str) -> bool:
         """Checks if given number is a valid float."""
@@ -327,9 +341,19 @@ class BankingApp(DatabaseActions):
             else:
                 print("Invalid number provided.")
 
+    def convert_to_xlsx(self, email: str):
+        query = f"SELECT * FROM transactions WHERE email = ?"
+
+        df = pd.read_sql(query, self.connection, params=(email,))
+        df.to_excel(f"{email} transactions.xlsx")
+
+        print("File created successfully.")
+
 
 
 def sql_queries():
+    """Function with necessary SQL queries."""
+
     con = sqlite3.connect("banking_database.db")
     cur = con.cursor()
     '''cur.execute("ALTER TABLE customer_actions RENAME TO customer_balance")
