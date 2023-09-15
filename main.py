@@ -3,10 +3,13 @@ import re
 import bcrypt
 import datetime
 import pandas as pd
+import os
+from typing import Union
 
 
 class ProgramInit:
     def __init__(self):
+        """Initialize command prompts for the first and second screens."""
         self.command_prompts_1 = {
             "Type '1' to log in.": "1",
             "Type '2' to register.": "2",
@@ -16,13 +19,17 @@ class ProgramInit:
             "Type '1' to deposit.": "1",
             "Type '2' to withdraw.": "2",
             "Type '3' to view balance.": "3",
-            "Type '4' to send a full account to your email address.": "4",
+            "Type '4' to download a full account.": "4",
             "Type '5' to log out.": "5",
             "Type 'quit' to quit the program.": "quit",
         }
 
     def start_up(self) -> str:
-        """Prints out available options for user to take at the first screen and checks if choice valid."""
+        """Print available options for the first screen and check if the choice is valid.
+
+        Returns:
+            str: The user's choice.
+        """
         print("Welcome, this is an interactive banking app.")
         for prompt, comm in self.command_prompts_1.items():
             print(prompt)
@@ -33,11 +40,17 @@ class ProgramInit:
                 "Incorrect command. Please try again. If you wish to quit, type in 'quit'."
             )
             user_choice = input()
+
         else:
+            os.system('cls')
             return user_choice
 
     def account_actions_start_up(self) -> str:
-        """Prints out available options for user to take at the second screen and checks if choice valid."""
+        """Print available options for the second screen and check if the choice is valid.
+
+        Returns:
+            str: The user's choice.
+        """
         for prompt, comm in self.command_prompts_2.items():
             print(prompt)
 
@@ -58,6 +71,7 @@ class ProgramInit:
             if user_choice == "1":
                 login_result = banking_app.login()
                 if login_result != False:
+                    os.system('cls')
                     email = login_result
                     print("Logged in successfully.")
                     banking_app.customer_info(email)
@@ -71,6 +85,7 @@ class ProgramInit:
             elif user_choice == "2":
                 login_result = banking_app.register()
                 if login_result != None:
+                    os.system('cls')
                     email = login_result
                     print(
                         "You have successfully created an account. You have now been logged in."
@@ -83,7 +98,11 @@ class ProgramInit:
                 raise (SystemExit("Program stopped."))
 
     def account_actions_main(self, email: str):
-        """Initializes the seconds screen based on user choice."""
+        """Initialize the second screen based on user choice.
+
+        Args:
+            email (str): The user's email address.
+        """
         banking_app = BankingApp()
         database_actions = DatabaseActions()
 
@@ -94,12 +113,16 @@ class ProgramInit:
         while True:
             user_choice = self.account_actions_start_up()
             if user_choice == "1":
+                os.system('cls')
                 banking_app.deposit(email)
             elif user_choice == "2":
+                os.system('cls')
                 banking_app.withdraw(email)
             elif user_choice == "3":
+                os.system('cls')
                 banking_app.customer_info(email)
             elif user_choice == "4":
+                os.system('cls')
                 banking_app.convert_to_xlsx(email)
             elif user_choice == "5":
                 break
@@ -109,12 +132,20 @@ class ProgramInit:
 
 class DatabaseActions:
     def __init__(self):
+        """Initialize the DatabaseActions class and establish a database connection."""
         self.connection = sqlite3.connect("banking_database.db")
         self.cursor = self.connection.cursor()
 
     def create_customer_profile(self, email: str, hashed_password: str):
-        """Adds a new email and password into the customer_info database. Password is hashed using bcrypt.
-        Also adds email to customer_balance database."""
+        """Create a new customer profile in the database.
+
+        Args:
+            email (str): The email address of the customer.
+            hashed_password (str): The hashed password for the customer.
+        """
+        # Adds a new email and hashed password into the customer_info database.
+        # Also adds email to the customer_balance database.
+
         self.cursor.execute(
             "INSERT INTO customer_info (email, password) VALUES(?, ?)",
             (email, hashed_password),
@@ -126,7 +157,14 @@ class DatabaseActions:
         self.connection.commit()
 
     def get_email(self, email: str) -> str:
-        """Enters customer_info database and returns selected email."""
+        """Retrieve a customer's email address from the database.
+
+        Args:
+            email (str): The email address to retrieve.
+
+        Returns:
+            str: The retrieved email address.
+        """
         self.cursor.execute("SELECT email FROM customer_info WHERE email = ?", (email,))
         email_result_tuple = self.cursor.fetchone()
         (unpacked_email,) = email_result_tuple  # Tuple unpacking
@@ -134,7 +172,14 @@ class DatabaseActions:
         return unpacked_email
 
     def get_balance(self, email: str) -> int:
-        """Enters customer_balance database and returns balance based on email."""
+        """Retrieve a customer's balance from the database.
+
+        Args:
+            email (str): The email address of the customer.
+
+        Returns:
+            int: The customer's balance.
+        """
         self.cursor.execute(
             "SELECT balance FROM customer_balance WHERE email = ?", (email,)
         )
@@ -144,7 +189,15 @@ class DatabaseActions:
         return unpacked_balance
 
     def balance_update(self, email: str, operation: float) -> float:
-        """Takes user input and posts a new number for user balance to the database accordingly."""
+        """Update a customer's balance in the database.
+
+        Args:
+            email (str): The email address of the customer.
+            operation (float): The operation to perform on the balance.
+
+        Returns:
+            float: The updated customer's balance.
+        """
         total_balance = self.get_balance(email)
         new_value = total_balance + operation
 
@@ -158,7 +211,14 @@ class DatabaseActions:
         self.connection.commit()
 
     def get_deposit(self, email: str) -> int:
-        """Enters customer_balance database and returns total deposit amount based on email."""
+        """Retrieve a customer's total deposit amount from the database.
+
+        Args:
+            email (str): The email address of the customer.
+
+        Returns:
+            int: The total deposit amount.
+        """
         self.cursor.execute(
             "SELECT deposit FROM customer_balance WHERE email = ?", (email,)
         )
@@ -168,7 +228,12 @@ class DatabaseActions:
         return unpacked_deposit
 
     def make_deposit(self, email: str, total_amount: float):
-        """Updates the customer_balance database with a new total amount for deposits."""
+        """Update a customer's total deposit amount in the database.
+
+        Args:
+            email (str): The email address of the customer.
+            total_amount (float): The new total deposit amount.
+        """
         self.cursor.execute(
             "UPDATE customer_balance SET deposit = ? WHERE email = ?",
             (
@@ -179,7 +244,14 @@ class DatabaseActions:
         self.connection.commit()
 
     def get_withdrawal(self, email: str) -> int:
-        """Enters customer_balance database and returns total withdrawal amount based on email."""
+        """Retrieve a customer's total withdrawal amount from the database.
+
+        Args:
+            email (str): The email address of the customer.
+
+        Returns:
+            int: The total withdrawal amount.
+        """
         self.cursor.execute(
             "SELECT withdrawal FROM customer_balance WHERE email = ?", (email,)
         )
@@ -189,7 +261,12 @@ class DatabaseActions:
         return unpacked_withdrawal
 
     def make_withdrawal(self, email: str, total_amount: float):
-        """Updates the customer_balance database with a new total amount for withdrawals."""
+        """Update a customer's total withdrawal amount in the database.
+
+        Args:
+            email (str): The email address of the customer.
+            total_amount (float): The new total withdrawal amount.
+        """
         self.cursor.execute(
             "UPDATE customer_balance SET withdrawal = ? WHERE email = ?",
             (
@@ -200,7 +277,12 @@ class DatabaseActions:
         self.connection.commit()
 
     def post_transaction(self, email: str, operation: float):
-        """Posts the transaction to the total transactions database."""
+        """Post a transaction to the total transactions database.
+
+        Args:
+            email (str): The email address of the customer.
+            operation (float): The transaction amount.
+        """
         current_time = datetime.datetime.now()
         self.cursor.execute(
             "INSERT INTO transactions (email, operation, date) VALUES(?, ?, ?)",
@@ -212,8 +294,12 @@ class DatabaseActions:
 class BankingApp(DatabaseActions):
     """Using inheritence to make sure functions are able to utilize queries to SQLite"""
 
-    def login(self) -> bool | str:
-        """Asks for email and password and initializes validity checks through other functions."""
+    def login(self) -> Union[bool, str]:
+        """Ask for user's email and password and validate them through other functions.
+
+        Returns:
+            Union[bool, str]: The user's email if login is successful, False otherwise.
+        """
         email = input("Enter your email address: ")
         password = input("Enter your password: ")
 
@@ -227,7 +313,14 @@ class BankingApp(DatabaseActions):
             return False
 
     def email_is_valid(self, input_email: str) -> bool:
-        """Checking if email is in the database"""
+        """Check if an email exists in the database.
+
+        Args:
+            input_email (str): The email to check.
+
+        Returns:
+            bool: True if the email exists in the database, False otherwise.
+        """
         self.cursor.execute(
             "SELECT COUNT(*) FROM customer_info WHERE email = ?", (input_email,)
         )
@@ -236,8 +329,16 @@ class BankingApp(DatabaseActions):
 
         return count > 0
 
-    def password_is_valid(self, input_email: str, input_password: str) -> bool | str:
-        """Checking if password corresponds to email."""
+    def password_is_valid(self, input_email: str, input_password: str) -> Union[bool, str]:
+        """Check if a password corresponds to an email.
+
+        Args:
+            input_email (str): The email to check.
+            input_password (str): The password to check.
+
+        Returns:
+            Union[bool, str]: True if the password is valid, False otherwise.
+        """
         self.cursor.execute(
             "SELECT password FROM customer_info WHERE email = ?", (input_email,)
         )
@@ -250,10 +351,13 @@ class BankingApp(DatabaseActions):
         else:
             return False
 
-    def register(self) -> str | None:
-        """Prompts the user for their desired email and password and sends them through validity checks.
-        If all checks passed, the new user information is stored in the database."""
+    def register(self) -> Union[str, None]:
+        """Prompt the user for their desired email and password and validate them.
+        If all checks pass, store the new user information in the database.
 
+        Returns:
+            Union[str, None]: The user's email address if registration is successful, None otherwise.
+        """
         while True:
             desired_email = input("Please enter an email you would like to use: ")
 
@@ -284,9 +388,15 @@ class BankingApp(DatabaseActions):
                     "Password invalid. Please choose another one, or type 'quit' to return: "
                 )
 
-    def email_format_is_valid(self, input_email: str) -> bool | str:
-        """Checks if user inputted email is in a valid format using regex."""
+    def email_format_is_valid(self, input_email: str) -> Union[bool, str]:
+        """Check if a user-inputted email is in a valid format using regex.
 
+        Args:
+            input_email (str): The email to validate.
+
+        Returns:
+            Union[bool, str]: True if the email is valid, False otherwise.
+        """
         result = re.search(
             "([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+",
             input_email,
@@ -296,13 +406,23 @@ class BankingApp(DatabaseActions):
         else:
             return True
 
-    def password_format_is_valid(self, input_password: str) -> bool | str:
-        """Makes a simple check if password is valid using regex."""
+    def password_format_is_valid(self, input_password: str) -> Union[bool, str]:
+        """Make a simple check if a password is valid using regex.
+
+        Args:
+            input_password (str): The password to validate.
+
+        Returns:
+            Union[bool, str]: True if the password is valid, False otherwise.
+        """
         return re.search(".{8,20}$", input_password)
 
-    def customer_info(self, email: str) -> print:
-        """Prints out the balance, deposit and withdrawal amounts of an account."""
+    def customer_info(self, email: str):
+        """Print out the balance, deposit, and withdrawal amounts of an account.
 
+        Args:
+            email (str): The user's email address.
+        """
         balance = self.get_balance(email)
         deposit = self.get_deposit(email)
         withdrawal = self.get_withdrawal(email)
@@ -313,7 +433,14 @@ class BankingApp(DatabaseActions):
         )
 
     def number_is_valid(self, input_number: str) -> bool:
-        """Checks if given number is a valid float."""
+        """Check if a given number is a valid float.
+
+        Args:
+            input_number (str): The number to check.
+
+        Returns:
+            bool: True if the number is a valid float, False otherwise.
+        """
         try:
             float_number = float(input_number)
             return True
@@ -321,7 +448,11 @@ class BankingApp(DatabaseActions):
             return False
 
     def deposit(self, email: str):
-        """Takes an email, checks if user input valid and calls make_deposit database function."""
+        """Take an email, check if user input is valid and call make_deposit database function.
+
+        Args:
+            email (str): The user's email address.
+        """
         print("In order to make a deposit, please enter the number only.")
         total_deposits = self.get_deposit(email)
         while True:
@@ -339,8 +470,12 @@ class BankingApp(DatabaseActions):
                 print("Invalid number provided.")
 
     def withdraw(self, email: str):
-        """Takes an email, checks if user input is valid, if selected amount not bigger than available balance
-        and calls make_withdrawal function if conditons met."""
+        """Take an email, check if user input is valid, and if the selected amount is not greater than the available balance.
+        Then, call the make_withdrawal function if conditions are met.
+
+        Args:
+            email (str): The user's email address.
+        """
         print("In order to make a withdrawal, please enter the number only.")
         total_withdrawal = self.get_withdrawal(email)
         available_balance = self.get_balance(email)
@@ -365,7 +500,11 @@ class BankingApp(DatabaseActions):
                 print("Invalid number provided.")
 
     def convert_to_xlsx(self, email: str):
-        """Creates an excel file for the specific user of all of their transactions."""
+        """Create an Excel file for the specific user containing all of their transactions.
+
+        Args:
+            email (str): The user's email address.
+        """
         query = f"SELECT * FROM transactions WHERE email = ?"
 
         df = pd.read_sql(query, self.connection, params=(email,))
