@@ -484,7 +484,7 @@ class BankingApp(DatabaseActions):
             if user_withdrawal == "quit":
                 return
             elif self.number_is_valid(user_withdrawal):
-                if float(user_withdrawal) > available_balance:
+                if float(user_withdrawal) > available_balance or float(user_withdrawal) < 0:
                     print(
                         f"Not enough funds available. You currently have €{available_balance}."
                     )
