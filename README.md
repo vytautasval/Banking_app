@@ -1,4 +1,4 @@
-Banking_app
+# Banking_app
 
 A simple console based banking application made to learn about databases.
 
